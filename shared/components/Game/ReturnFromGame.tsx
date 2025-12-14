@@ -110,8 +110,8 @@ const Return = ({ isHidden, href, gameMode }: ReturnProps) => {
         <ProgressBar />
         {/* Stats button - visible only on small screens */}
         <ActionButton
-          borderRadius='2xl'
-          className='p-2 text-xl w-auto sm:hidden'
+          borderRadius='xl'
+          className='py-1 px-3 text-xl w-auto sm:hidden'
           onClick={handleShowStats}
         >
           <ChartSpline size={24} />
