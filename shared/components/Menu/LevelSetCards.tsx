@@ -450,7 +450,7 @@ const LevelSetCards = <TLevel extends string, TItem>({
                       <button
                         className={clsx(
                           'text-2xl flex justify-center items-center gap-2 group',
-                          'rounded-2xl  hover:cursor-pointer',
+                          'rounded-3xl  hover:cursor-pointer',
                           'duration-250 transition-all ease-in-out',
                           'px-2 py-3 max-md:mx-4 border-b-8',
                           isSelected

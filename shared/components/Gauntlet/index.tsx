@@ -6,6 +6,7 @@ import { useRouter } from '@/core/i18n/routing';
 import { Random } from 'random-js';
 import { useClick, useCorrect, useError } from '@/shared/hooks/useAudio';
 import { saveSession } from '@/shared/lib/gauntletStats';
+import useGauntletSettingsStore from '@/shared/store/useGauntletSettingsStore';
 
 import EmptyState from './EmptyState';
 import PreGameScreen from './PreGameScreen';
@@ -86,6 +87,9 @@ export default function Gauntlet<T>({ config, onCancel }: GauntletProps<T>) {
   const { playCorrect } = useCorrect();
   const { playError } = useError();
 
+  // Get persisted settings from store
+  const gauntletSettings = useGauntletSettingsStore();
+
   const {
     dojoType,
     dojoLabel,
@@ -101,12 +105,45 @@ export default function Gauntlet<T>({ config, onCancel }: GauntletProps<T>) {
     initialGameMode
   } = config;
 
-  // Game configuration state
-  const [gameMode, setGameMode] = useState<GauntletGameMode>(
-    initialGameMode || 'Pick'
+  // Game configuration state - initialized from store for all settings
+  // The store persists settings across navigation from PreGameScreen to game route
+  const [gameMode, setGameModeState] = useState<GauntletGameMode>(() => {
+    // Use store value, fallback to config's initialGameMode, then default to 'Pick'
+    const storeMode = gauntletSettings.getGameMode(dojoType);
+    // If store has a value, use it; otherwise use initialGameMode from config
+    return storeMode || initialGameMode || 'Pick';
+  });
+  const [difficulty, setDifficultyState] = useState<GauntletDifficulty>(
+    gauntletSettings.getDifficulty(dojoType)
   );
-  const [difficulty, setDifficulty] = useState<GauntletDifficulty>('normal');
-  const [repetitions, setRepetitions] = useState<RepetitionCount>(10);
+  const [repetitions, setRepetitionsState] = useState<RepetitionCount>(
+    gauntletSettings.getRepetitions(dojoType)
+  );
+
+  // Wrapper setters that also sync to store for persistence across navigation
+  const setGameMode = useCallback(
+    (mode: GauntletGameMode) => {
+      setGameModeState(mode);
+      gauntletSettings.setGameMode(dojoType, mode);
+    },
+    [dojoType, gauntletSettings]
+  );
+
+  const setDifficulty = useCallback(
+    (diff: GauntletDifficulty) => {
+      setDifficultyState(diff);
+      gauntletSettings.setDifficulty(dojoType, diff);
+    },
+    [dojoType, gauntletSettings]
+  );
+
+  const setRepetitions = useCallback(
+    (reps: RepetitionCount) => {
+      setRepetitionsState(reps);
+      gauntletSettings.setRepetitions(dojoType, reps);
+    },
+    [dojoType, gauntletSettings]
+  );
 
   // Game phase state
   const [phase, setPhase] = useState<'pregame' | 'playing' | 'results'>(
@@ -437,13 +474,7 @@ export default function Gauntlet<T>({ config, onCancel }: GauntletProps<T>) {
     } else {
       setTimeout(() => setLastAnswerCorrect(null), 800);
     }
-  }, [
-    playError,
-    currentQuestion,
-    getItemId,
-    lives,
-    endGame
-  ]);
+  }, [playError, currentQuestion, getItemId, lives, endGame]);
 
   // Handle answer submission (Type mode)
   const handleSubmit = useCallback(
