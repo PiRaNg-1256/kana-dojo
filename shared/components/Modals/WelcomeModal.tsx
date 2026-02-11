@@ -16,6 +16,12 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import useOnboardingStore from '@/shared/store/useOnboardingStore';
 import { themeSets, useThemePreferences } from '@/features/Preferences';
+import {
+  isPremiumThemeId,
+  getWallpaperStyles,
+  getThemeDefaultWallpaperId,
+} from '@/features/Preferences/data/themes';
+import { getWallpaperById } from '@/features/Preferences/data/wallpapers';
 import fonts from '@/features/Preferences/data/fonts';
 import { isRecommendedFont } from '@/features/Preferences/data/recommendedFonts';
 import { useClick } from '@/shared/hooks/useAudio';
@@ -58,6 +64,7 @@ const WelcomeModal = () => {
 
   const [localTheme, setLocalTheme] = useState(selectedTheme);
   const [localFont, setLocalFont] = useState(currentFont);
+  const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
   const recommendedFonts = useMemo(
     () => fonts.filter(fontObj => isRecommendedFont(fontObj.name)),
     [],
@@ -426,20 +433,47 @@ const WelcomeModal = () => {
                       <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4'>
                         {filteredThemes.map(theme => {
                           const isChaosTheme = theme.id === '?';
+                          const isPremiumTheme = isPremiumThemeId(theme.id);
+                          const isHovered = hoveredTheme === theme.id;
+
+                          // Get wallpaper for premium themes
+                          const themeWallpaperId = getThemeDefaultWallpaperId(
+                            theme.id,
+                          );
+                          const wallpaper = themeWallpaperId
+                            ? getWallpaperById(themeWallpaperId)
+                            : undefined;
+
+                          // Determine background
                           const background = isChaosTheme
                             ? CHAOS_THEME_GRADIENT
-                            : theme.backgroundColor;
+                            : isHovered
+                              ? theme.cardColor
+                              : theme.backgroundColor;
+
+                          const wallpaperStyles = wallpaper
+                            ? getWallpaperStyles(
+                                wallpaper.url,
+                                isHovered,
+                                wallpaper.urlWebp,
+                              )
+                            : {};
+
                           return (
                             <button
                               key={theme.id}
                               className='cursor-pointer rounded-lg p-3 transition-all duration-200 hover:opacity-90 active:scale-95'
                               style={{
-                                background,
+                                ...(wallpaper
+                                  ? wallpaperStyles
+                                  : { background }),
                                 outline:
                                   localTheme === theme.id
                                     ? `3px solid ${theme.secondaryColor}`
                                     : 'none',
                               }}
+                              onMouseEnter={() => setHoveredTheme(theme.id)}
+                              onMouseLeave={() => setHoveredTheme(null)}
                               onClick={() => {
                                 playClick();
                                 setLocalTheme(theme.id);
@@ -447,7 +481,9 @@ const WelcomeModal = () => {
                               }}
                               title={theme.id}
                             >
-                              <div className='mb-2 text-left'>
+                              <div
+                                className={`mb-2 text-left ${isPremiumTheme ? 'invisible' : ''}`}
+                              >
                                 {isChaosTheme ? (
                                   <span className='relative flex items-center justify-start text-sm text-white capitalize'>
                                     <span
@@ -473,7 +509,7 @@ const WelcomeModal = () => {
                                 )}
                               </div>
                               <div
-                                className='flex gap-1.5'
+                                className='flex min-h-4 gap-1.5'
                                 style={{
                                   visibility: isChaosTheme
                                     ? 'hidden'
@@ -481,11 +517,11 @@ const WelcomeModal = () => {
                                 }}
                               >
                                 <div
-                                  className='h-4 w-4 rounded-full'
+                                  className={`h-4 w-4 rounded-full ${isPremiumTheme ? 'hidden' : ''}`}
                                   style={{ background: theme.mainColor }}
                                 />
                                 <div
-                                  className='h-4 w-4 rounded-full'
+                                  className={`h-4 w-4 rounded-full ${isPremiumTheme ? 'hidden' : ''}`}
                                   style={{ background: theme.secondaryColor }}
                                 />
                               </div>
